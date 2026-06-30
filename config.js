@@ -15,4 +15,4 @@ const SHEET_CSV_URLS = {
 };
 
 // Optional: change the LGU name shown in the page header
-const LGU_NAME = "[LGU Name]";
+const LGU_NAME = "[LGU CARMEN, SURIGAO DEL SUR]";
