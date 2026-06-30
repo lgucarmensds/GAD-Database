@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAD Database — Public Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --paper:#F3ECE0;
+    --paper-deep:#EAE0CF;
+    --ink:#2B2118;
+    --ink-soft:#5B5043;
+    --plum:#6E1E45;
+    --plum-deep:#4A1430;
+    --gold:#B8893B;
+    --line:#D8CBB0;
+    --social:#6E1E45;
+    --economic:#A8512E;
+    --infra:#2E6171;
+    --environmental:#4F6F52;
+    --institutional:#8A6D1F;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px;}
+
+  /* ===== Header / Hero ===== */
+  header.hero{
+    background:
+      repeating-linear-gradient(180deg, transparent, transparent 27px, var(--line) 28px),
+      var(--paper);
+    border-bottom:3px double var(--ink);
+    padding:54px 0 38px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--plum);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .eyebrow::before{content:"";width:30px;height:2px;background:var(--gold);display:inline-block;}
+  h1.title{
+    font-family:'Source Serif 4', serif;
+    font-weight:700;
+    font-size:clamp(34px,5vw,54px);
+    line-height:1.05;
+    margin:0 0 14px;
+    color:var(--plum-deep);
+  }
+  .lgu-name{
+    font-family:'Source Serif 4', serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:19px;
+    color:var(--ink-soft);
+    margin:0 0 30px;
+  }
+  .hero-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:34px;
+    border-top:1px solid var(--line);
+    padding-top:22px;
+  }
+  .meta-stat .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:30px;
+    color:var(--plum);
+    display:block;
+  }
+  .meta-stat .lbl{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+  }
+
+  /* ===== Sector tab strip (signature element) ===== */
+  nav.tabs{
+    position:sticky; top:0; z-index:20;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding-top:14px;
+  }
+  .tabs-row{display:flex; gap:6px; overflow-x:auto; padding-bottom:0;}
+  .tab-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:.04em;
+    background:var(--paper-deep);
+    border:1px solid var(--line);
+    border-bottom:none;
+    border-radius:8px 8px 0 0;
+    padding:11px 16px 13px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    white-space:nowrap;
+    position:relative;
+    top:1px;
+    transition:background .15s, color .15s;
+  }
+  .tab-btn .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+  .tab-btn[data-sector="all"] .sw{background:var(--ink-soft);}
+  .tab-btn[data-sector="social"] .sw{background:var(--social);}
+  .tab-btn[data-sector="economic"] .sw{background:var(--economic);}
+  .tab-btn[data-sector="infrastructure"] .sw{background:var(--infra);}
+  .tab-btn[data-sector="environmental"] .sw{background:var(--environmental);}
+  .tab-btn[data-sector="institutional"] .sw{background:var(--institutional);}
+  .tab-btn.active{
+    background:var(--paper);
+    color:var(--ink);
+    border-color:var(--ink);
+    border-bottom:1px solid var(--paper);
+    font-weight:600;
+  }
+
+  /* ===== Sections ===== */
+  main{padding:42px 0 70px;}
+  .section-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:var(--gold);
+    margin:0 0 6px;
+  }
+  h2.section-title{
+    font-family:'Source Serif 4', serif;
+    font-size:26px;
+    margin:0 0 26px;
+    color:var(--plum-deep);
+  }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin-bottom:44px;
+  }
+  .stat-card{background:var(--paper); padding:22px 20px;}
+  .stat-card .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:28px;
+    color:var(--plum);
+  }
+  .stat-card .lbl{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+
+  .chart-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:26px 26px 14px;
+    margin-bottom:30px;
+  }
+  .chart-card h3{
+    font-family:'Source Serif 4', serif;
+    font-size:18px;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .chart-card p.note{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 18px;
+  }
+  .chart-grid{display:grid; grid-template-columns:1.4fr 1fr; gap:24px;}
+  @media (max-width:760px){ .chart-grid{grid-template-columns:1fr;} .stat-grid{grid-template-columns:repeat(2,1fr);} }
+
+  .legend-list{list-style:none;margin:0;padding:0;font-family:'IBM Plex Mono', monospace; font-size:12.5px;}
+  .legend-list li{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--paper-deep);}
+  .legend-list .sw{width:10px;height:10px;border-radius:2px;flex:none;}
+
+  #status-banner{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    background:var(--paper-deep);
+    border:1px dashed var(--gold);
+    color:var(--ink-soft);
+    padding:14px 18px;
+    margin-bottom:34px;
+    border-radius:4px;
+  }
+  #status-banner.ok{border-style:solid; border-color:var(--line);}
+  #status-banner code{background:var(--paper);padding:1px 5px;border-radius:3px;}
+
+  footer{
+    border-top:3px double var(--ink);
+    padding:30px 0 50px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  footer a{color:var(--plum);}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Public Transparency Portal</div>
+    <h1 class="title">Gender and Development<br>Database</h1>
+    <p class="lgu-name">[LGU Name] · Municipal Planning and Development Office</p>
+    <div class="hero-meta">
+      <div class="meta-stat"><span class="num" id="m-total">—</span><span class="lbl">Indicators Tracked</span></div>
+      <div class="meta-stat"><span class="num" id="m-complete">—</span><span class="lbl">Data Filled In</span></div>
+      <div class="meta-stat"><span class="num" id="m-updated">—</span><span class="lbl">Last Refreshed</span></div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap tabs-row" id="tab-strip">
+    <button class="tab-btn active" data-sector="all"><span class="sw"></span>All Sectors</button>
+    <button class="tab-btn" data-sector="social"><span class="sw"></span>I. Social</button>
+    <button class="tab-btn" data-sector="economic"><span class="sw"></span>II. Economic</button>
+    <button class="tab-btn" data-sector="infrastructure"><span class="sw"></span>III. Infrastructure</button>
+    <button class="tab-btn" data-sector="environmental"><span class="sw"></span>IV. Environmental</button>
+    <button class="tab-btn" data-sector="institutional"><span class="sw"></span>V. Institutional</button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div id="status-banner">Loading live data from the Google Sheet…</div>
+
+  <p class="section-label">Overview</p>
+  <h2 class="section-title">Database completion at a glance</h2>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num" id="s-indicators">—</div><div class="lbl">Indicators in view</div></div>
+    <div class="stat-card"><div class="num" id="s-filled">—</div><div class="lbl">Indicators with data</div></div>
+    <div class="stat-card"><div class="num" id="s-pct">—</div><div class="lbl">Completion rate</div></div>
+    <div class="stat-card"><div class="num" id="s-sources">—</div><div class="lbl">Unique data sources cited</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>Data completion by sector</h3>
+      <p class="note">Share of indicators per sector that have at least one figure or data source filled in.</p>
+      <canvas id="chartCompletion" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Aggregate Male vs. Female</h3>
+      <p class="note">Sum of all numeric, directly-comparable counts reported (counts only — rates, percentages and ratios are excluded from this total).</p>
+      <canvas id="chartGender" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Indicators tracked per sector</h3>
+    <p class="note">Total number of distinct indicators the LGU monitors under each GAD Database sector.</p>
+    <canvas id="chartIndicators" height="140"></canvas>
+  </div>
+
+  <ul class="legend-list" id="sector-legend"></ul>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Data sourced live from the official LGU GAD Database (Google Sheets), maintained by the GAD Focal Point System / MPDO. This page only displays figures already encoded by the LGU's offices and is refreshed automatically whenever the sheet is updated.</p>
+    <p>Questions or corrections regarding the data itself should be directed to the Municipal Planning and Development Office (MPDO) / GAD Focal Point System.</p>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
